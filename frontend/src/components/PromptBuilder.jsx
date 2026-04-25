@@ -19,14 +19,6 @@ export default function PromptBuilder({
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [zoomPct, setZoomPct] = useState(100);
-  const [useAiPlacement, setUseAiPlacement] = useState(true);
-  const [aiState, setAiState] = useState({
-    loading: false,
-    suggestion: '',
-    reasoning: '',
-    anchor: null,
-    scaleFactor: 1,
-  });
 
   const S = useRef({
     roomImg: null,
@@ -69,9 +61,6 @@ export default function PromptBuilder({
       const { roomImg, productCanvas, productImgSz, roomW, roomH, canvasW, canvasH, scale, panX, panY } = S.current;
 
       const promptAnchor = resolvePromptAnchor(product, value);
-      const activeAnchor = useAiPlacement && aiState.anchor ? aiState.anchor : promptAnchor;
-      const activeScale = useAiPlacement && aiState.scaleFactor ? aiState.scaleFactor : 1;
-
       ctx.clearRect(0, 0, canvasW, canvasH);
       ctx.fillStyle = '#1B2635';
       ctx.fillRect(0, 0, canvasW, canvasH);
@@ -88,7 +77,7 @@ export default function PromptBuilder({
         product,
         { width: roomW, height: roomH },
         value,
-        { anchor: activeAnchor, scaleFactor: activeScale },
+        { anchor: promptAnchor, scaleFactor: 1 },
         productImgSz,
       );
 
@@ -102,7 +91,7 @@ export default function PromptBuilder({
 
       ctx.restore();
     });
-  }, [product, value, useAiPlacement, aiState.anchor, aiState.scaleFactor]);
+  }, [product, value]);
 
   const applyZoom = (factor) => {
     const s = S.current.scale;
@@ -123,8 +112,6 @@ export default function PromptBuilder({
     let cancelled = false;
     setReady(false);
     setLoadError(false);
-    setUseAiPlacement(true);
-    setAiState((s) => ({ ...s, loading: true, suggestion: '', reasoning: '', anchor: null, scaleFactor: 1 }));
 
     (async () => {
       try {
@@ -138,68 +125,6 @@ export default function PromptBuilder({
         S.current.roomW = roomImg.naturalWidth;
         S.current.roomH = roomImg.naturalHeight;
 
-        // Gemini placement suggestion
-        try {
-          const aiCanvas = document.createElement('canvas');
-          aiCanvas.width = roomImg.naturalWidth;
-          aiCanvas.height = roomImg.naturalHeight;
-          const aiCtx = aiCanvas.getContext('2d');
-          aiCtx.imageSmoothingEnabled = true;
-          aiCtx.imageSmoothingQuality = 'high';
-          aiCtx.drawImage(roomImg, 0, 0);
-          const roomBase64 = String(aiCanvas.toDataURL('image/jpeg', 0.92)).split(',')[1] || '';
-
-          const resp = await fetch('/api/placement', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              roomBase64,
-              roomMimeType: 'image/jpeg',
-              product: {
-                name: product.name,
-                width: product.width,
-                height: product.height,
-                depth: product.depth,
-              },
-            }),
-          });
-          const json = await resp.json();
-          if (json?.ok && json?.placement) {
-            const p = json.placement;
-            const anchor = {
-              x: Math.max(0.01, Math.min(0.99, Number(p.x_percent) / 100)),
-              y: Math.max(0.01, Math.min(0.99, Number(p.y_percent) / 100)),
-            };
-            const scaleFactor = Number(p.scale_factor) || 1;
-            setAiState({
-              loading: false,
-              suggestion: p.suggestion || 'Best placement selected by AI.',
-              reasoning: p.reasoning || '',
-              anchor,
-              scaleFactor,
-            });
-            if (p.suggestion) onChange(p.suggestion);
-          } else {
-            setAiState({
-              loading: false,
-              suggestion: 'AI suggestion unavailable. Using prompt-based placement.',
-              reasoning: '',
-              anchor: null,
-              scaleFactor: 1,
-            });
-            setUseAiPlacement(false);
-          }
-        } catch {
-          setAiState({
-            loading: false,
-            suggestion: 'AI suggestion unavailable. Using prompt-based placement.',
-            reasoning: '',
-            anchor: null,
-            scaleFactor: 1,
-          });
-          setUseAiPlacement(false);
-        }
-
         requestAnimationFrame(() => {
           if (cancelled) return;
           fitRoom();
@@ -211,29 +136,20 @@ export default function PromptBuilder({
         if (!cancelled) {
           setLoadError(true);
           setReady(false);
-          setAiState({
-            loading: false,
-            suggestion: 'Could not load room/product preview.',
-            reasoning: '',
-            anchor: null,
-            scaleFactor: 1,
-          });
         }
       }
     })();
 
     return () => { cancelled = true; };
-  }, [room?.src, product?.image, product?.name, product?.width, product?.height, product?.depth, fitRoom, draw, onChange]);
+  }, [room?.src, product?.image, fitRoom, draw]);
 
   useEffect(() => {
     if (ready) draw();
-  }, [value, useAiPlacement, ready, draw]);
+  }, [value, ready, draw]);
 
   const handleGenerate = () => {
     const fallbackAnchor = resolvePromptAnchor(product, value);
-    const anchor = useAiPlacement && aiState.anchor ? aiState.anchor : fallbackAnchor;
-    const scaleFactor = useAiPlacement ? (aiState.scaleFactor || 1) : 1;
-    onGenerate({ anchor, scaleFactor });
+    onGenerate({ anchor: fallbackAnchor, scaleFactor: 1 });
   };
 
   return (
@@ -243,10 +159,10 @@ export default function PromptBuilder({
           <ArrowLeft size={16} />
         </button>
         <div>
-          <div className="eyebrow">Step 4 · AI Placement</div>
-          <h2 className="h-display text-2xl md:text-3xl font-bold mt-1">AI Suggestion + Preview</h2>
+          <div className="eyebrow">Step 4 · Placement</div>
+          <h2 className="h-display text-2xl md:text-3xl font-bold mt-1">Position Preview</h2>
           <p className="text-belami-navy/60 text-sm mt-0.5">
-            AI suggests the best position. Drag placement is disabled.
+            Preview the product position before generating.
           </p>
         </div>
       </div>
@@ -278,10 +194,7 @@ export default function PromptBuilder({
                 {suggestions.map((s) => (
                   <button
                     key={s}
-                    onClick={() => {
-                      onChange(s);
-                      setUseAiPlacement(false);
-                    }}
+                    onClick={() => onChange(s)}
                     className="rounded-full border border-belami-navy/15 bg-white px-3.5 py-1.5 text-xs font-medium text-belami-navy hover:border-belami-gold hover:text-belami-gold transition"
                   >
                     {s}
@@ -312,7 +225,7 @@ export default function PromptBuilder({
 
         <div className="lg:col-span-3 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-belami-navy/60">AI Preview Canvas</span>
+            <span className="text-xs font-semibold text-belami-navy/60">Preview Canvas</span>
             <div className="flex items-center gap-1">
               <button onClick={() => applyZoom(0.82)} className="btn-ghost !px-2 !py-1.5" title="Zoom out">
                 <ZoomOut size={14} />
@@ -335,7 +248,7 @@ export default function PromptBuilder({
             {!ready && !loadError && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                 <div className="h-10 w-10 rounded-full border-4 border-white/10 border-t-belami-gold animate-spin" />
-                <p className="text-xs text-white/50 font-medium">Preparing AI placement preview…</p>
+                <p className="text-xs text-white/50 font-medium">Preparing placement preview…</p>
               </div>
             )}
             {loadError && (
@@ -356,29 +269,9 @@ export default function PromptBuilder({
           </div>
 
           <div className="rounded-2xl border border-belami-navy/10 bg-belami-cream/40 p-4 text-sm text-belami-navy">
-            <div className="font-semibold">AI Suggestion</div>
+            <div className="font-semibold">Placement Preview</div>
             <div className="mt-1">
-              {aiState.loading ? 'Analyzing room with Gemini Flash…' : (aiState.suggestion || 'No suggestion available')}
-            </div>
-            {!!aiState.reasoning && (
-              <div className="mt-1 text-xs text-belami-navy/70">{aiState.reasoning}</div>
-            )}
-            <div className="mt-3 flex items-center gap-2">
-              <button
-                type="button"
-                className={`btn-ghost ${useAiPlacement ? '!border-belami-gold !text-belami-gold' : ''}`}
-                onClick={() => setUseAiPlacement(true)}
-                disabled={!aiState.anchor}
-              >
-                Use AI placement
-              </button>
-              <button
-                type="button"
-                className={`btn-ghost ${!useAiPlacement ? '!border-belami-gold !text-belami-gold' : ''}`}
-                onClick={() => setUseAiPlacement(false)}
-              >
-                Use prompt placement
-              </button>
+              {value.trim() || 'Use a prompt template or enter placement text.'}
             </div>
           </div>
         </div>

@@ -39,7 +39,7 @@ export default function Hero({ onStart }) {
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.4 }}
             className="lg:col-span-7"
           >
             <div className="eyebrow mb-5">Bailey Street Home · Virtual Try-On Studio</div>
@@ -76,7 +76,7 @@ export default function Hero({ onStart }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, delay: 0.15 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
             className="lg:col-span-5"
           >
             <div className="relative">

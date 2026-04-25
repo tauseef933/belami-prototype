@@ -367,20 +367,13 @@ export function composeVariation({ roomImg, productImg, product, prompt, variati
 }
 
 export async function composeAllVariations({ roomSrc, productSrc, product, prompt, positionOverride }) {
-  console.log('[tryOn] loading images', { roomSrc: roomSrc?.slice(0, 64), productSrc });
   const [roomImg, productImgRaw] = await Promise.all([loadImage(roomSrc), loadImage(productSrc)]);
-  console.log('[tryOn] images loaded', {
-    room: `${roomImg.naturalWidth}x${roomImg.naturalHeight}`,
-    product: `${productImgRaw.naturalWidth}x${productImgRaw.naturalHeight}`,
-  });
 
-  // Remove product background with IMG.LY while keeping original resolution.
   let productImg;
   try {
     productImg = await removeProductBackgroundHighRes(productSrc);
-    console.log('[tryOn] background removed using @imgly/background-removal');
   } catch (err) {
-    console.warn('[tryOn] @imgly removal failed, falling back to local chroma removal', err);
+    console.warn('[tryOn] product preparation failed, falling back to local chroma removal', err);
     productImg = removeWhiteBackground(productImgRaw);
   }
 
@@ -400,7 +393,6 @@ export async function composeAllVariations({ roomSrc, productSrc, product, promp
       throw e;
     }
   }
-  console.log('[tryOn] composed', out.length, 'variations');
   return out;
 }
 

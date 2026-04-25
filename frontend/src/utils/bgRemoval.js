@@ -1,5 +1,3 @@
-import { removeBackground } from '@imgly/background-removal';
-
 async function loadImage(src, timeoutMs = 20000) {
   return await new Promise((resolve, reject) => {
     if (!src) return reject(new Error('Missing image source'));
@@ -27,27 +25,8 @@ async function loadImage(src, timeoutMs = 20000) {
   });
 }
 
-async function blobToDataUrl(blob) {
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
 export async function removeProductBackgroundHighRes(productSrc) {
-  const outBlob = await removeBackground(productSrc, {
-    output: {
-      quality: 1,
-      format: 'image/png',
-      type: 'foreground',
-    },
-    progress: () => {},
-  });
-
-  const dataUrl = await blobToDataUrl(outBlob);
-  const img = await loadImage(dataUrl);
+  const img = await loadImage(productSrc);
 
   const canvas = document.createElement('canvas');
   canvas.width = img.naturalWidth;

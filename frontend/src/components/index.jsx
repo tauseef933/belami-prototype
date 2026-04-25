@@ -79,53 +79,6 @@ export function ProductCard({ product, isSelected, isAnalyzing, isDisabled, onSe
   );
 }
 
-// ─── PlacementResult ──────────────────────────────────────────────────────
-import { MapPin, Info, Sparkles } from 'lucide-react';
-
-export function PlacementResult({ placement, product }) {
-  if (!placement) return null;
-  const { suggestion, reasoning, x_percent, y_percent, scale_factor } = placement;
-  return (
-    <motion.div
-      initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:8 }}
-      transition={{ duration:0.35 }}
-      className="bg-white rounded-2xl border border-belami-blue/15 shadow-premium overflow-hidden"
-    >
-      <div className="bg-gradient-to-r from-belami-navy to-belami-blue px-4 py-3 flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-belami-gold" />
-        <h3 className="text-sm font-700 text-white">Gemini AI Recommendation</h3>
-        {product && <span className="ml-auto text-[10px] text-white/55 truncate max-w-[120px]">{product.name}</span>}
-      </div>
-      <div className="p-4 space-y-3">
-        {suggestion && (
-          <div className="flex gap-2.5">
-            <MapPin className="w-4 h-4 text-belami-blue flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-600 text-belami-navy leading-relaxed">{suggestion}</p>
-          </div>
-        )}
-        {reasoning && (
-          <div className="flex gap-2.5 bg-belami-cream/70 rounded-xl p-3">
-            <Info className="w-4 h-4 text-belami-navy/40 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-belami-navy/65 leading-relaxed">{reasoning}</p>
-          </div>
-        )}
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            ['Position X', `${Math.round(x_percent ?? 0)}%`],
-            ['Position Y', `${Math.round(y_percent ?? 0)}%`],
-            ['Scale',      `×${Number(scale_factor ?? 1).toFixed(2)}`],
-          ].map(([label, val]) => (
-            <div key={label} className="bg-belami-navy/5 rounded-xl p-2 text-center">
-              <p className="text-[10px] text-belami-navy/45 font-500 uppercase tracking-wider">{label}</p>
-              <p className="text-sm font-700 text-belami-navy mt-0.5">{val}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 // ─── ErrorBanner ──────────────────────────────────────────────────────────
 import { AlertCircle, X } from 'lucide-react';
 
